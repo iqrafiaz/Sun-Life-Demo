@@ -1,17 +1,27 @@
 public with sharing class AccountHelper {
     @AuraEnabled(cacheable=true)
     public static List<Account> getAccountList() {
-        if (Schema.sObjectType.Account.isAccessible()) {
-            try {
+        try {
+            if (Schema.sObjectType.Account.isAccessible() &&
+                Schema.sObjectType.Account.fields.Id.isAccessible() &&
+                Schema.sObjectType.Account.fields.Name.isAccessible() &&
+                Schema.sObjectType.Account.fields.ownerid.isAccessible() &&
+                Schema.sObjectType.Account.fields.Phone.isAccessible() &&
+                Schema.sObjectType.Account.fields.Website.isAccessible() &&
+                Schema.sObjectType.Account.fields.AnnualRevenue.isAccessible()        
+            ) {
                 return [SELECT Id, Name, owner.Name,ownerid,
                 Phone, Website, AnnualRevenue
                 FROM Account WHERE Industry = 'Financial Services'];
-            } catch (Exception ex) {
-                system.debug('Could not retreive records Exception in: ' + ex.getStackTraceString());
-                return null;
+            } else {
+                NoAccessException ex = new NoAccessException();
+                ex.setMessage('Insufficient Permission');
+                throw ex;
             }
+        } catch (Exception ex) {
+            system.debug('Could not retreive records due to exception Exception: ' + ex.getMessage() );
+            return null;
         }
-        return null;
     }
 
     @AuraEnabled
@@ -25,11 +35,14 @@ public static string updateAccounts(Object data) {
             update accountsForUpdate;
             return 'Success: contacts updated successfully';
         } else {
-            return 'Insufficient Permissions';
+            NoAccessException ex = new NoAccessException();
+            ex.setMessage('Insufficient Permission');
+            throw ex;
         }
     }
-    catch (Exception e) {
-        return 'The following exception has occurred: ' + e.getMessage();
+    catch (Exception ex) {
+        system.debug('Could not retreive records due to exception Exception: ' + ex.getMessage() );
+        return null;
     }
 }
 }
