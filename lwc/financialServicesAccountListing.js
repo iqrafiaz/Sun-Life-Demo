@@ -43,6 +43,7 @@ export default class FinancialServicesAccountListing extends LightningElement {
     }
     ];
     
+    _wiredResult;
     error;
     accountList = [];
     searchText = '';
@@ -52,16 +53,15 @@ export default class FinancialServicesAccountListing extends LightningElement {
     sortDirection;
     
     @wire(getAccountList)
-    wiredAccounts({
-        error,
-        data
-    }) {
+    wiredAccounts(result) {
+        this._wiredResult = result;
+        let { data, error } = result;
         if (data) {
             let tempRecords = JSON.parse( JSON.stringify( data ) );
             for (let i = 0; i < tempRecords.length; i++) {
                 if (tempRecords[i].Owner) {
-                    tempRecords[i].accountOwner = tempRecords[i].Owner?.Name;
-                    tempRecords[i].nameUrl = `/${tempRecords[i].Id}`;
+                    tempRecords[i].accountOwner = tempRecords[i]?.Owner?.Name;
+                    tempRecords[i].nameUrl = `/${tempRecords[i]?.Id}`;
                 }
             }
             this.accountList = tempRecords;
@@ -71,12 +71,21 @@ export default class FinancialServicesAccountListing extends LightningElement {
         }
     }
 
+    /**
+     * This method calls the method to sort data table columns by passing the direction and field name for sorting
+     * @param {*} event 
+     */
     handleSortAccountData(event) {       
-        this.sortBy = event.detail.fieldName;       
-        this.sortDirection = event.detail.sortDirection;       
-        this.sortAccountData(event.detail.fieldName, event.detail.sortDirection);
+        this.sortBy = event?.detail?.fieldName;       
+        this.sortDirection = event?.detail?.sortDirection;       
+        this.sortAccountData(event?.detail?.fieldName, event?.detail?.sortDirection);
     }
 
+    /**
+     * This method performs sorting on the data table according to the given direction and on the specified field
+     * @param {*} fieldName 
+     * @param {*} direction 
+     */
     sortAccountData(fieldName, direction) {
         let parseData = JSON.parse(JSON.stringify(this.accountList));
         let keyValue = (a) => {
@@ -84,7 +93,7 @@ export default class FinancialServicesAccountListing extends LightningElement {
         };
         let isReverse = direction === 'asc' ? 1 : -1;
         
-           parseData.sort((x, y) => {
+           parseData?.sort((x, y) => {
             x = keyValue(x) ? keyValue(x) : ''; 
             y = keyValue(y) ? keyValue(y) : '';
     
@@ -95,22 +104,30 @@ export default class FinancialServicesAccountListing extends LightningElement {
 
     }
 
+    /**
+     * This method searched for the record that has the same name as the search string entered by user in the lightning-input
+     * @param {*} event 
+     */
     searchAccount(event) {
-        this.searchText = event.detail?.value;
+        this.searchText = event?.detail?.value;
 
         if (this.searchText) {
             let tempAccountsList = this.cacheData;
             this.accountList = [];
-            this.accountList = tempAccountsList.filter(el => el.Name.toLowerCase().includes(this.searchText.toLowerCase()))
+            this.accountList = tempAccountsList?.filter(el => el.Name.toLowerCase().includes(this.searchText.toLowerCase()))
         } else if (this.searchText === '') {
             this.accountList = this.cacheData;
         }
 
     }
 
+    /**
+     * This method saves the updated record after user performs in-line editing on the data table
+     * @param {*} event 
+     */
     async handleSave(event) {
-        const updatedFields = event.detail.draftValues;
-        let notifyChangeIds = updatedFields.map(row => { return { "recordId": row.Id } });
+        const updatedFields = event?.detail?.draftValues;
+        let notifyChangeIds = updatedFields?.map(row => { return { "recordId": row.Id } });
 
         try {
             const result = await updateAccounts({ data: updatedFields });
@@ -121,14 +138,14 @@ export default class FinancialServicesAccountListing extends LightningElement {
                     variant: 'success'
                 })
             );
-            getRecordNotifyChange(notifyChangeIds);
-            await refreshApex(this.accountList);
+            await getRecordNotifyChange(notifyChangeIds);
+            await refreshApex(this._wiredResult);
             this.draftValues = [];
         } catch (error) {
             this.dispatchEvent(
                 new ShowToastEvent({
                     title: 'Error updating or reloading contacts',
-                    message: error.body.message,
+                    message: error?.body?.message,
                     variant: 'error'
                 })
             );
